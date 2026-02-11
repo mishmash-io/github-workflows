@@ -1,0 +1,144 @@
+name: Build and attest with maven
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        type: string
+        default: '25'
+        required: false
+      skip-tests:
+        type: boolean
+        default: false
+        required: false
+    outputs:
+      build-cache-key:
+        description: A cache of the build, including dependencies
+        value: ${{ jobs.build.outputs.build-cache-key }}
+      build-artifacts-names:
+        description: A JSON array containing the names of all artifacts maven built (poms, jars, etc)
+        value: ${{ jobs.build.outputs.artifact-names }}
+      build-artifact-id:
+        description: The id of a build artifact containing a maven repo of what was built
+        value: ${{ jobs.build.outputs.artifact-id }}
+    secrets:
+      MMIO_GPG_KEY:
+        required: true
+      MMIO_GPG_PASSPHRASE:
+        required: true
+      GITHUB_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+      artifact-metadata: write
+    outputs:
+      artifact-names: ${{ steps.artifacts.outputs.artifacts }}
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      build-cache-key: ${{ steps.cache-key.outputs.build-cache-key }}
+
+    steps:
+    - name: Create build cache key
+      id: cache-key
+      run: echo build-cache-key="${{ runner.os }}-maven-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+    - name: Checkout source code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - name: Set up JDK ${{ inputs.java-version }}
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: 'temurin'
+        cache: maven
+        gpg-private-key: ${{ secrets.MMIO_GPG_KEY }}
+        gpg-passphrase: MMIO_GPG_PASSPHRASE
+    - name: Build with Maven
+      env:
+        MAVEN_GPG_PASSPHRASE: ${{ secrets.MMIO_GPG_PASSPHRASE }}
+      run: mvn clean deploy -DskipTests=${{ inputs.skip-tests }} spdx:createSPDX -Dproject.build.outputTimestamp=`date -u +"%FT%TZ"` -Dbuildinfo.ignoreJavadoc=false artifact:buildinfo --file pom.xml
+    - name: Download deps for caching and offline tests
+      run: mvn dependency:go-offline
+    - name: Download additional deps to keep surefire plugin happy when offline
+      # to be removed once maven-surefire-plugin allows using a custom junit platform version
+      run: mvn dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.12.1
+    - name: Cache build artifacts and deps
+      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      with:
+        path: ~/.m2/repository
+        key: ${{ steps.cache-key.outputs.build-cache-key }}
+    - name: Archive deployable maven repo
+      id: upload
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: maven-deployable-repo
+        path: /tmp/maven-repo/
+    - name: Add asset to release
+      if: ${{ github.event_name == 'release' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: zip -r /tmp/maven-deployable-repo.zip /tmp/maven-repo/ && gh release upload "${{ github.ref_name }}" /tmp/maven-deployable-repo.zip
+    - name: Extract artifact names
+      id: artifacts
+      run: echo artifacts=$(cat `find target/ -name \*.buildinfo` | grep '^outputs.*\.filename' | sed 's/.*=//' | jq -Rnc '[inputs]') >> "$GITHUB_OUTPUT"
+
+  attest:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      matrix:
+        artifact: ${{ fromJSON(needs.build.outputs.artifact-names) }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Download build repo
+        id: repo-download
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+      - name: Find the artifact
+        id: find-artifact
+        run: echo path=$(find . -name ${{ matrix.artifact }}) >> "$GITHUB_OUTPUT"
+      - name: Upload the artifact
+        id: upload-artifact
+        if: ${{ steps.find-artifact.outputs.path != null && steps.find-artifact.outputs.path != '' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ steps.find-artifact.outputs.path }}
+      - name: Create attestation
+        id: create-attestation
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' }}
+        with:
+          subject-path: ${{ steps.find-artifact.outputs.path }}
+          subject-name: ${{ matrix.artifact }}
+          push-to-registry: false
+      - name: Find related SBOM
+        id: find-sbom
+        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' && ! endsWith(steps.find-artifact.outputs.path, '.spdx.json') }}
+        run: echo sbom-path=$(find `dirname -- ${{ steps.find-artifact.outputs.path }}` -name \*.spdx.json) >> "$GITHUB_OUTPUT"
+      - name: Add SBOM attestation
+        id: sbom-attestation
+        if: ${{ github.event_name == 'release' && steps.find-sbom.outputs.sbom-path != null && steps.find-sbom.outputs.sbom-path != '' }}
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3.0.0
+        with:
+          subject-path: ${{ steps.find-artifact.outputs.path }}
+          sbom-path: ${{ steps.find-sbom.outputs.sbom-path }}
+          push-to-registry: false
+      - name: Upload release asset
+        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" ${{ steps.find-artifact.outputs.path }}
