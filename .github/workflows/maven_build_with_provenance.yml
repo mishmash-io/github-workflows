@@ -26,8 +26,6 @@ on:
         required: true
       MMIO_GPG_PASSPHRASE:
         required: true
-      GITHUB_TOKEN:
-        required: true
 
 permissions:
   contents: read
