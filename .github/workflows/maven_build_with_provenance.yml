@@ -153,11 +153,11 @@ jobs:
       - name: Get artifact groupId
         id: group-id
         if: ${{ github.event_name == 'release' && steps.find-pom.outcome == 'success' && steps.find-pom.outputs.pom-path != null && steps.find-pom.outputs.pom-path != '' }}
-        run: echo maven-group-id=$(mvn help:evaluate -Dexpression="project.groupId" -DforceStdout -q --file ${{ steps.find-pom.outputs.pom-path }}) >> "$GITHUB_OUTPUT"
+        run: echo maven-group-id=$(mvn help:evaluate -N -Dexpression="project.groupId" -DforceStdout -q --file ${{ steps.find-pom.outputs.pom-path }}) >> "$GITHUB_OUTPUT"
       - name: Get artifact version
         id: version
         if: ${{ github.event_name == 'release' && steps.find-pom.outcome == 'success' && steps.find-pom.outputs.pom-path != null && steps.find-pom.outputs.pom-path != '' }}
-        run: echo maven-version=$(mvn help:evaluate -Dexpression="project.version" -DforceStdout -q --file ${{ steps.find-pom.outputs.pom-path }}) >> "$GITHUB_OUTPUT"
+        run: echo maven-version=$(mvn help:evaluate -N -Dexpression="project.version" -DforceStdout -q --file ${{ steps.find-pom.outputs.pom-path }}) >> "$GITHUB_OUTPUT"
       - name: Create linked artifacts storage record
         if: ${{ github.event_name == 'release' && steps.group-id.outcome == 'success' && steps.group-id.outputs.maven-group-id != null && steps.group-id.outputs.maven-group-id != '' }}
         env:
