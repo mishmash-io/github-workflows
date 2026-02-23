@@ -65,7 +65,7 @@ jobs:
       run: mvn dependency:go-offline
     - name: Download additional deps to keep surefire plugin happy when offline
       # to be removed once maven-surefire-plugin allows using a custom junit platform version
-      run: mvn dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.12.1
+      run: mvn dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.12.2
     - name: Cache build artifacts and deps
       uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
       with:
