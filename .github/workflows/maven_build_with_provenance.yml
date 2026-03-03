@@ -123,7 +123,7 @@ jobs:
           path: ${{ steps.find-artifact.outputs.path }}
       - name: Create attestation
         id: create-attestation
-        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' }}
         with:
           subject-path: ${{ steps.find-artifact.outputs.path }}
@@ -136,7 +136,7 @@ jobs:
       - name: Add SBOM attestation
         id: sbom-attestation
         if: ${{ github.event_name == 'release' && steps.find-sbom.outputs.sbom-path != null && steps.find-sbom.outputs.sbom-path != '' }}
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3.0.0
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: ${{ steps.find-artifact.outputs.path }}
           sbom-path: ${{ steps.find-sbom.outputs.sbom-path }}
