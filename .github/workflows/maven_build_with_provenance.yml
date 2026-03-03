@@ -146,6 +146,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ github.ref_name }}" ${{ steps.find-artifact.outputs.path }}
+      - name: Upload release asset GPG signature
+        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" "${{ steps.find-artifact.outputs.path }}.asc"
+      - name: Upload release asset attestation
+        if: ${{ github.event_name == 'release' && steps.create-attestation.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" "${{ steps.create-attestation.outputs.bundle-path }}"
       - name: Find related POM
         id: find-pom
         if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' && ! endsWith(steps.find-artifact.outputs.path, '.spdx.json') }}
