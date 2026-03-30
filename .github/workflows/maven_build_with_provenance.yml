@@ -67,7 +67,7 @@ jobs:
       # to be removed once maven-surefire-plugin allows using a custom junit platform version
       run: mvn dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.12.2
     - name: Cache build artifacts and deps
-      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:
         path: ~/.m2/repository
         key: ${{ steps.cache-key.outputs.build-cache-key }}
@@ -101,7 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Restore cached build artifacts
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ~/.m2/repository
           key: ${{ needs.build.outputs.build-cache-key }}
