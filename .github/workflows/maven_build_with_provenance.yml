@@ -97,6 +97,7 @@ jobs:
     strategy:
       matrix:
         artifact: ${{ fromJSON(needs.build.outputs.artifact-names) }}
+    if: ${{ github.event_name == 'release' }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -124,52 +125,52 @@ jobs:
       - name: Create attestation
         id: create-attestation
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
-        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' }}
+        if: ${{ steps.upload-artifact.outcome == 'success' }}
         with:
           subject-path: ${{ steps.find-artifact.outputs.path }}
           subject-name: ${{ matrix.artifact }}
           push-to-registry: false
       - name: Find related SBOM
         id: find-sbom
-        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' && ! endsWith(steps.find-artifact.outputs.path, '.spdx.json') }}
+        if: ${{ steps.upload-artifact.outcome == 'success' && ! endsWith(steps.find-artifact.outputs.path, '.spdx.json') }}
         run: echo sbom-path=$(find `dirname -- ${{ steps.find-artifact.outputs.path }}` -name \*.spdx.json) >> "$GITHUB_OUTPUT"
       - name: Add SBOM attestation
         id: sbom-attestation
-        if: ${{ github.event_name == 'release' && steps.find-sbom.outputs.sbom-path != null && steps.find-sbom.outputs.sbom-path != '' }}
+        if: ${{ steps.find-sbom.outputs.sbom-path != null && steps.find-sbom.outputs.sbom-path != '' }}
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: ${{ steps.find-artifact.outputs.path }}
           sbom-path: ${{ steps.find-sbom.outputs.sbom-path }}
           push-to-registry: false
       - name: Upload release asset
-        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' }}
+        if: ${{ steps.upload-artifact.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ github.ref_name }}" ${{ steps.find-artifact.outputs.path }}
       - name: Upload release asset GPG signature
-        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' }}
+        if: ${{ steps.upload-artifact.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ github.ref_name }}" "${{ steps.find-artifact.outputs.path }}.asc"
       - name: Upload release asset SigStore signature
-        if: ${{ github.event_name == 'release' && steps.create-attestation.outcome == 'success' }}
+        if: ${{ steps.create-attestation.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cp "${{ steps.create-attestation.outputs.bundle-path }}" "/tmp/${{ matrix.artifact }}.sigstore.json" && gh release upload "${{ github.ref_name }}" "/tmp/${{ matrix.artifact }}.sigstore.json"
       - name: Find related POM
         id: find-pom
-        if: ${{ github.event_name == 'release' && steps.upload-artifact.outcome == 'success' && ! endsWith(steps.find-artifact.outputs.path, '.spdx.json') }}
+        if: ${{ steps.upload-artifact.outcome == 'success' && ! endsWith(steps.find-artifact.outputs.path, '.spdx.json') }}
         run: echo pom-path=$(if ${{ endsWith(steps.find-artifact.outputs.path, '.pom') }}; then echo ${{ steps.find-artifact.outputs.path }}; else find `dirname -- ${{ steps.find-artifact.outputs.path }}` -name \*.pom; fi) >> "$GITHUB_OUTPUT"
       - name: Get artifact groupId
         id: group-id
-        if: ${{ github.event_name == 'release' && steps.find-pom.outcome == 'success' && steps.find-pom.outputs.pom-path != null && steps.find-pom.outputs.pom-path != '' }}
+        if: ${{ steps.find-pom.outcome == 'success' && steps.find-pom.outputs.pom-path != null && steps.find-pom.outputs.pom-path != '' }}
         run: echo maven-group-id=$(mvn help:evaluate -N -Dexpression="project.groupId" -DforceStdout -q --file ${{ steps.find-pom.outputs.pom-path }}) >> "$GITHUB_OUTPUT"
       - name: Get artifact version
         id: version
-        if: ${{ github.event_name == 'release' && steps.find-pom.outcome == 'success' && steps.find-pom.outputs.pom-path != null && steps.find-pom.outputs.pom-path != '' }}
+        if: ${{ steps.find-pom.outcome == 'success' && steps.find-pom.outputs.pom-path != null && steps.find-pom.outputs.pom-path != '' }}
         run: echo maven-version=$(mvn help:evaluate -N -Dexpression="project.version" -DforceStdout -q --file ${{ steps.find-pom.outputs.pom-path }}) >> "$GITHUB_OUTPUT"
       - name: Create linked artifacts storage record
-        if: ${{ github.event_name == 'release' && steps.group-id.outcome == 'success' && steps.group-id.outputs.maven-group-id != null && steps.group-id.outputs.maven-group-id != '' }}
+        if: ${{ steps.group-id.outcome == 'success' && steps.group-id.outputs.maven-group-id != null && steps.group-id.outputs.maven-group-id != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
