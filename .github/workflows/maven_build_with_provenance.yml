@@ -11,9 +11,13 @@ on:
         type: boolean
         default: false
         required: false
+      cache-maven:
+        type: boolean
+        default: true
+        required: false
     outputs:
       build-cache-key:
-        description: A cache of the build, including dependencies
+        description: A cache of the build, including dependencies (if cache-maven is true or when releasing)
         value: ${{ jobs.build.outputs.build-cache-key }}
       build-artifacts-names:
         description: A JSON array containing the names of all artifacts maven built (poms, jars, etc)
@@ -46,6 +50,7 @@ jobs:
     steps:
     - name: Create build cache key
       id: cache-key
+      if: ${{ inputs.cache-maven || github.event_name == 'release' }}
       run: echo build-cache-key="${{ runner.os }}-maven-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
     - name: Checkout source code
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -62,12 +67,15 @@ jobs:
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MMIO_GPG_PASSPHRASE }}
       run: mvn clean deploy -DskipTests=${{ inputs.skip-tests }} spdx:createSPDX -Dproject.build.outputTimestamp=`date -u +"%FT%TZ"` -Dbuildinfo.ignoreJavadoc=false artifact:buildinfo --file pom.xml
     - name: Download deps for caching and offline tests
+      if: ${{ inputs.cache-maven || github.event_name == 'release' }}
       run: mvn dependency:go-offline
     - name: Download additional deps to keep surefire plugin happy when offline
+      if: ${{ inputs.cache-maven || github.event_name == 'release' }}
       # to be removed once maven-surefire-plugin allows using a custom junit platform version
       run: mvn dependency:get -Dartifact=org.junit.platform:junit-platform-launcher:1.12.2
     - name: Cache build artifacts and deps
       uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      if: ${{ inputs.cache-maven || github.event_name == 'release' }}
       with:
         path: ~/.m2/repository
         key: ${{ steps.cache-key.outputs.build-cache-key }}
