@@ -59,7 +59,6 @@ jobs:
       with:
         java-version: ${{ inputs.java-version }}
         distribution: 'temurin'
-        cache: maven
         gpg-private-key: ${{ secrets.MMIO_GPG_KEY }}
         gpg-passphrase: MMIO_GPG_PASSPHRASE
     - name: Build with Maven
