@@ -102,6 +102,7 @@ jobs:
       attestations: write
       artifact-metadata: write
     strategy:
+      max-parallel: 5
       matrix:
         artifact: ${{ fromJSON(needs.build.outputs.artifact-names) }}
     if: ${{ github.event_name == 'release' }}
