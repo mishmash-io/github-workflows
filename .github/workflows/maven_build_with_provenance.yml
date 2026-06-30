@@ -133,7 +133,7 @@ jobs:
           path: ${{ steps.find-artifact.outputs.path }}
       - name: Create attestation
         id: create-attestation
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         if: ${{ steps.upload-artifact.outcome == 'success' }}
         with:
           subject-path: ${{ steps.find-artifact.outputs.path }}
@@ -146,7 +146,7 @@ jobs:
       - name: Add SBOM attestation
         id: sbom-attestation
         if: ${{ steps.find-sbom.outputs.sbom-path != null && steps.find-sbom.outputs.sbom-path != '' }}
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-path: ${{ steps.find-artifact.outputs.path }}
           sbom-path: ${{ steps.find-sbom.outputs.sbom-path }}
