@@ -67,7 +67,7 @@ jobs:
         gpg-passphrase: MMIO_GPG_PASSPHRASE
     - name: Install linux packages for jextract
       if: ${{ inputs.jextract-enable }}
-      run: sudo apt-get install -y linux-libc-dev
+      run: sudo apt-get install -y build-essential
     # download URLs for jextract are taken from https://jdk.java.net/jextract/
     - name: Setup jextract for java 19
       if: ${{ inputs.jextract-enable && inputs.java-version == '19' }}
