@@ -65,6 +65,7 @@ jobs:
         distribution: 'temurin'
         gpg-private-key: ${{ secrets.MMIO_GPG_KEY }}
         gpg-passphrase: MMIO_GPG_PASSPHRASE
+    # download URLs for jextract are taken from https://jdk.java.net/jextract/
     - name: Setup jextract for java 19
       if: ${{ inputs.jextract-enable && inputs.java-version == '19' }}
       run: |
