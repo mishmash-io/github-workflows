@@ -7,6 +7,10 @@ on:
         type: string
         default: '25'
         required: false
+      jextract-enable:
+        type: boolean
+        default: false
+        required: false
       skip-tests:
         type: boolean
         default: false
@@ -61,6 +65,47 @@ jobs:
         distribution: 'temurin'
         gpg-private-key: ${{ secrets.MMIO_GPG_KEY }}
         gpg-passphrase: MMIO_GPG_PASSPHRASE
+    # download URLs for jextract are taken from https://jdk.java.net/jextract/
+    - name: Setup jextract for java 19
+      if: ${{ inputs.jextract-enable && inputs.java-version == '19' }}
+      run: |
+        cd /tmp
+        wget https://download.java.net/java/early_access/jextract/19/2/openjdk-19-jextract+2-3_linux-x64_bin.tar.gz
+        tar -xzf openjdk-19-jextract+2-3_linux-x64_bin.tar.gz
+        sudo mv jextract-19 /opt/
+        echo "/opt/jextract-19/bin" >> "$GITHUB_PATH"
+    - name: Setup jextract for java 20
+      if: ${{ inputs.jextract-enable && inputs.java-version == '20' }}
+      run: |
+        cd /tmp
+        wget https://download.java.net/java/early_access/jextract/20/1/openjdk-20-jextract+1-2_linux-x64_bin.tar.gz
+        tar -xzf openjdk-20-jextract+1-2_linux-x64_bin.tar.gz
+        sudo mv jextract-20 /opt/
+        echo "/opt/jextract-20/bin" >> "$GITHUB_PATH"
+    - name: Setup jextract for java 21
+      if: ${{ inputs.jextract-enable && inputs.java-version == '21' }}
+      run: |
+        cd /tmp
+        wget https://download.java.net/java/early_access/jextract/21/1/openjdk-21-jextract+1-2_linux-x64_bin.tar.gz
+        tar -xzf openjdk-21-jextract+1-2_linux-x64_bin.tar.gz
+        sudo mv jextract-21 /opt/
+        echo "/opt/jextract-21/bin" >> "$GITHUB_PATH"
+    - name: Setup jextract for java 22
+      if: ${{ inputs.jextract-enable && inputs.java-version == '22' }}
+      run: |
+        cd /tmp
+        wget https://download.java.net/java/early_access/jextract/22/6/openjdk-22-jextract+6-47_linux-x64_bin.tar.gz
+        tar -xzf openjdk-22-jextract+6-47_linux-x64_bin.tar.gz
+        sudo mv jextract-22 /opt/
+        echo "/opt/jextract-22/bin" >> "$GITHUB_PATH"
+    - name: Setup jextract for java 25
+      if: ${{ inputs.jextract-enable && inputs.java-version == '25' }}
+      run: |
+        cd /tmp
+        wget https://download.java.net/java/early_access/jextract/25/2/openjdk-25-jextract+2-4_linux-x64_bin.tar.gz
+        tar -xzf openjdk-25-jextract+2-4_linux-x64_bin.tar.gz
+        sudo mv jextract-25 /opt/
+        echo "/opt/jextract-25/bin" >> "$GITHUB_PATH"
     - name: Build with Maven
       env:
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MMIO_GPG_PASSPHRASE }}
