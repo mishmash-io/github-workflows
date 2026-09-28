@@ -109,8 +109,6 @@ jobs:
         tar -xzf openjdk-25-jextract+2-4_linux-x64_bin.tar.gz
         sudo mv jextract-25 /opt/
         echo "/opt/jextract-25/bin" >> "$GITHUB_PATH"
-    - name: Prime GPG agent caches
-      run: echo "test" | gpg --clearsign
     - name: Build with Maven
       env:
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MMIO_GPG_PASSPHRASE }}
