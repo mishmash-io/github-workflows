@@ -112,7 +112,7 @@ jobs:
     - name: Build with Maven
       env:
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MMIO_GPG_PASSPHRASE }}
-      run: mvn clean deploy -DskipTests=${{ inputs.skip-tests }} spdx:createSPDX -Dproject.build.outputTimestamp=`date -u +"%FT%TZ"` -Dbuildinfo.ignoreJavadoc=false artifact:buildinfo --file pom.xml
+      run: mvn --batch-mode clean deploy -DskipTests=${{ inputs.skip-tests }} spdx:createSPDX -Dproject.build.outputTimestamp=`date -u +"%FT%TZ"` -Dbuildinfo.ignoreJavadoc=false artifact:buildinfo --file pom.xml
     - name: Download deps for caching and offline tests
       if: ${{ inputs.cache-maven || github.event_name == 'release' }}
       run: mvn dependency:go-offline
