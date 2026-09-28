@@ -64,7 +64,7 @@ jobs:
         java-version: ${{ inputs.java-version }}
         distribution: 'temurin'
         gpg-private-key: ${{ secrets.MMIO_GPG_KEY }}
-        gpg-passphrase: MMIO_GPG_PASSPHRASE
+        gpg-passphrase-env-var: MMIO_GPG_PASSPHRASE
     - name: Install linux packages for jextract
       if: ${{ inputs.jextract-enable }}
       run: sudo apt-get install -y build-essential linux-libc-dev
